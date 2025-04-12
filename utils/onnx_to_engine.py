@@ -14,7 +14,7 @@ os.makedirs(engine_folder, exist_ok=True)
 
 #onnx_files = os.listdir(onnx_folder)
 
-for onnx_file_path in ["utils/Y_0.25_0.55.onnx"]:
+for onnx_file_path in ["utils/YOLO10-YOLO12_NMS.onnx"]:
 
     file_name = onnx_file_path.lstrip("utils/").rstrip(".onnx")
 
