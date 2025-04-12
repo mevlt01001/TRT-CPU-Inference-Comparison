@@ -3,7 +3,7 @@ import pycuda.autoinit
 import numpy as np
 import time
 
-engine = load_engine("EngineFolder/Y_0.22_0.55.engine")
+engine = load_engine("EngineFolder/Y_0.25_0.55.engine")
 input_buffers, output_buffers = allocate_buffers(engine, outshape=(100, 5))
 context, stream = create_execution_context(engine, input_buffers, output_buffers)
 latencies = []
