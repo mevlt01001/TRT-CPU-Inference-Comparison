@@ -31,7 +31,11 @@ print(f"CPU FPS: {len(cpu_latencies) / total_cpu_time:.2f}")
 print(f"TRT+CPU FPS: {(len(trt_latencies) + len(cpu_latencies)) / (total_trt_time + total_cpu_time):.2f}")
 
 """
-TRT FPS: 48.27
-CPU FPS: 39.85
-TRT+CPU FPS: 43.66
+DESKTOP TRT FPS: 48.27 (Raw_model)
+DESKTOP CPU FPS: 39.85 (NSM)
+DESKTOP TRT+CPU FPS: 43.66
+
+AGX ORIN TRT FPS: 37.43 (Raw_model))
+AGX ORIN CPU FPS: 29.84 (NMS)
+AGX ORIN TRT+CPU FPS: 33.21
 """

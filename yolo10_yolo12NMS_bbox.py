@@ -18,5 +18,6 @@ total_time = sum(latencies)
 print(f"TRT FPS: {len(latencies) / total_time:.2f}")
 
 """
-TRT FPS: 18.61
+DESKTOP TRT FPS: 18.61
+AGX ORIN TRT FPS: 20.05
 """

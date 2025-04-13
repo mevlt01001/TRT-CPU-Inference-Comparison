@@ -58,6 +58,6 @@ def run_inference(context, stream, input_buffers, output_buffers, data):
     for buffer in output_buffers:
         cuda.memcpy_dtoh_async(buffer.cpu_buffer, buffer.gpu_buffer, stream)
     
-    #stream.synchronize() # yavaşlatıyor
+    # stream.synchronize() # yavaşlatıyor
     
     return [buffer.cpu_buffer for buffer in output_buffers]

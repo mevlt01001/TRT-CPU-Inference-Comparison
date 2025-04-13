@@ -16,5 +16,6 @@ for i in range(100):
 print(f"TRT FPS: {len(latencies) / sum(latencies):.2f}")
 
 """
-TRT FPS: 49.04
+DESKTOP TRT FPS: 49.04
+AGX ORIN TRT FPS: 38.84
 """
