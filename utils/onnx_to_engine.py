@@ -14,7 +14,7 @@ os.makedirs(engine_folder, exist_ok=True)
 
 #onnx_files = os.listdir(onnx_folder)
 
-for onnx_file_path in ["utils/YOLO12_POSTPROCESS.onnx"]:
+for onnx_file_path in ["utils/YOLO_POSTPROCESS_POSET_11.onnx"]:
 
     file_name = onnx_file_path.lstrip("utils/").rstrip(".onnx")
 
@@ -34,7 +34,7 @@ for onnx_file_path in ["utils/YOLO12_POSTPROCESS.onnx"]:
         raise RuntimeError(f"Failed to parse model {file_name}")
     
     config = BUILDER.create_builder_config()
-    config.set_memory_pool_limit(tensorrt.MemoryPoolType.WORKSPACE, 8*1024*1024*1024) #4gb
+    config.set_memory_pool_limit(tensorrt.MemoryPoolType.WORKSPACE, 3*1024*1024*1024) #4gb
 
     if BUILDER.platform_has_fast_fp16:
         config.set_flag(tensorrt.BuilderFlag.FP16)
