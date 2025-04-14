@@ -3,7 +3,7 @@ import pycuda.autoinit
 import numpy as np
 import time
 
-engine = load_engine("EngineFolder/YOLO12_POSTPROCESS.engine")
+engine = load_engine("EngineFolder/yolo12_postprocess.engine")
 input_buffers, output_buffers = allocate_buffers(engine, outshape=(100,5))
 context, stream = create_execution_context(engine, input_buffers, output_buffers)
 latencies = []
@@ -16,6 +16,6 @@ for i in range(100):
 print(f"TRT FPS: {len(latencies) / sum(latencies):.2f}")
 
 """
-DESKTOP TRT FPS: None
+DESKTOP TRT FPS: 92.57
 AGX ORIN TRT FPS: 39.04
 """

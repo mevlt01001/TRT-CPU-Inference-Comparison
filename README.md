@@ -4,7 +4,7 @@
 [`TensorRT(YOLO12_NMS)`](yolo12_nms_engine.py) **FPS: 32.98**\
 [`TensorRT(YOLO12)+CPU(NMS)`](yolo12_engine_nms_cpu.py) **FPS: 43.66**\
 [`TensorRT(YOLO10+YOLO12_NMS)`](yolo10_yolo12NMS_bbox.py) **FPS: 18.61**\
-[`TensorRT(NMS)`](only_yolo_12_postpocess.py) **FPS: *None***
+[`TensorRT(NMS)`](only_yolo_12_postpocess.py) **FPS: 92.57**
 ## AGX ORIN Results:
 [`TensorRT(YOLO10)`](raw_yolo10_engine.py) **FPS: 112.39**\
 [`TensorRT(YOLO12)`](raw_yolo12_engine.py) **FPS: 38.84**\
