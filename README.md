@@ -31,6 +31,10 @@ Her ne kadar TensorRT.INMSLayer [dökümantasyonunda](https://docs.nvidia.com/de
 
 TensorRT.NMSLayer çok hızlı çalışsa da (yakalşık +15fps), IoU thresholdingi her kutu için çok iyi düzeyde yapamıyor ve FP değerini arttırıyor.
 
+![FPbroken](assests/output.png)
+
+Bu görselde 58 bbox var!
+
 
 [`TensorRT.INMSLayer`](https://docs.nvidia.com/deeplearning/tensorrt/latest/_static/python-api/infer/Graph/Layers.html#inmslayer) 2 farklı yol ile oluşturulabiliyor: [ONNX:helper.make](https://github.com/mevlt01001/YOLO12-RTDETR-ensemble-model/blob/main/INMSLayer_onnx.py) ve [TensorRT:INetworkDefiniton.add_nms](https://github.com/mevlt01001/YOLO12-RTDETR-ensemble-model/blob/main/create_INMSLayer_with_trt.py)
 
