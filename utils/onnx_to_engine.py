@@ -14,7 +14,7 @@ os.makedirs(engine_folder, exist_ok=True)
 
 #onnx_files = os.listdir(onnx_folder)
 
-for onnx_file_path in ["utils/YOLO_POSTPROCESS_POSET_11.onnx"]:
+for onnx_file_path in ["utils/Torchvision_NMS.onnx"]:
 
     file_name = onnx_file_path.lstrip("utils/").rstrip(".onnx")
 
@@ -34,6 +34,7 @@ for onnx_file_path in ["utils/YOLO_POSTPROCESS_POSET_11.onnx"]:
         raise RuntimeError(f"Failed to parse model {file_name}")
     
     config = BUILDER.create_builder_config()
+    config.profiling_verbosity = tensorrt.ProfilingVerbosity.DETAILED
     config.set_memory_pool_limit(tensorrt.MemoryPoolType.WORKSPACE, 3*1024*1024*1024) #4gb
 
     if BUILDER.platform_has_fast_fp16:
@@ -41,7 +42,8 @@ for onnx_file_path in ["utils/YOLO_POSTPROCESS_POSET_11.onnx"]:
         print(f"FP16 precision setted for {file_name}")
 
     profile = BUILDER.create_optimization_profile()
-    profile.set_shape(network.get_input(0).name, min=(1,84,8400), opt=(1,84,8400), max=(1,84,8400))
+    profile.set_shape(network.get_input(0).name, min=(8400,4), opt=(8400,4), max=(8400,4))
+    profile.set_shape(network.get_input(1).name, min=(8400,), opt=(8400,), max=(8400,))
 
     config.add_optimization_profile(profile)
 

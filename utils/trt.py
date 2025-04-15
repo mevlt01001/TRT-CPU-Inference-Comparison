@@ -27,7 +27,8 @@ def allocate_buffers(engine, outshape=None):
     for i in range(engine.num_io_tensors):
         tensor_name = engine.get_tensor_name(i)
         tensor_type = engine.get_tensor_dtype(tensor_name)
-        tensor_shape = engine.get_tensor_shape(tensor_name) if engine.get_tensor_shape(tensor_name)[0] != -1 else outshape
+        print(f"tensor_name: {tensor_name}, tensor_type: {tensor_type}, tensor_shape: {engine.get_tensor_shape(tensor_name)}")
+        tensor_shape = engine.get_tensor_shape(tensor_name) if -1 not in engine.get_tensor_shape(tensor_name) else outshape
         tensor_dtype = tensorrt.nptype(tensor_type)
         tensor_size = tensorrt.volume(tensor_shape)
 
@@ -48,9 +49,12 @@ def create_execution_context(engine, input_buffers, output_buffers):
         context.set_tensor_address(buffer.name, buffer.gpu_buffer)
     return context, cuda.Stream()
 
-def run_inference(context, stream, input_buffers, output_buffers, data):
-    for buffer in input_buffers:
-        np.copyto(buffer.cpu_buffer, data.ravel())
+def run_inference(context, stream, input_buffers, output_buffers, data: list):
+    assert len(input_buffers) == len(data), "input_buffers ve data uzunlukları eşit olmalı\nİnput_buffers: {}\nData: {}".format(len(input_buffers), len(data))
+    for i in range(len(input_buffers)):
+        buffer = input_buffers[i]
+        _data = data[i]
+        np.copyto(buffer.cpu_buffer, _data.ravel())
         cuda.memcpy_htod_async(buffer.gpu_buffer, buffer.cpu_buffer, stream)
 
     context.execute_async_v3(stream_handle=stream.handle)
