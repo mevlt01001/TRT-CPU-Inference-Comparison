@@ -14,7 +14,7 @@ def load_engine(engine_file):
 
     return ICudaEngine
 
-class TensorHostDeviceBuffer:
+class Tensor_CPU_GPU_Buffer_address:
     def __init__(self, name, cpu_buffer, gpu_buffer):
         self.name = name
         self.cpu_buffer = cpu_buffer
@@ -35,9 +35,9 @@ def allocate_buffers(engine, outshape=None):
         cpu_memory = cuda.pagelocked_empty(tensor_size, tensor_dtype)
         gpu_memory = cuda.mem_alloc(cpu_memory.nbytes)
         if engine.get_tensor_mode(tensor_name) == tensorrt.TensorIOMode.INPUT:
-            input_cpu_gpu_buffers.append(TensorHostDeviceBuffer(tensor_name, cpu_memory, gpu_memory))
+            input_cpu_gpu_buffers.append(Tensor_CPU_GPU_Buffer_address(tensor_name, cpu_memory, gpu_memory))
         else:
-            output_cpu_gpu_buffers.append(TensorHostDeviceBuffer(tensor_name, cpu_memory, gpu_memory))
+            output_cpu_gpu_buffers.append(Tensor_CPU_GPU_Buffer_address(tensor_name, cpu_memory, gpu_memory))
 
     return input_cpu_gpu_buffers, output_cpu_gpu_buffers
 

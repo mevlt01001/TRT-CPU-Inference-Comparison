@@ -14,7 +14,7 @@ os.makedirs(engine_folder, exist_ok=True)
 
 #onnx_files = os.listdir(onnx_folder)
 
-for onnx_file_path in ["utils/Torchvision_NMS.onnx"]:
+for onnx_file_path in ["utils/YOLO12_for_inms_layer.onnx"]:
 
     file_name = onnx_file_path.lstrip("utils/").rstrip(".onnx")
 
@@ -42,8 +42,7 @@ for onnx_file_path in ["utils/Torchvision_NMS.onnx"]:
         print(f"FP16 precision setted for {file_name}")
 
     profile = BUILDER.create_optimization_profile()
-    profile.set_shape(network.get_input(0).name, min=(8400,4), opt=(8400,4), max=(8400,4))
-    profile.set_shape(network.get_input(1).name, min=(8400,), opt=(8400,), max=(8400,))
+    profile.set_shape(network.get_input(0).name, min=(1,3,640,640), opt=(1,3,640,640), max=(1,3,640,640))
 
     config.add_optimization_profile(profile)
 
