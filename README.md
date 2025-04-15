@@ -24,7 +24,12 @@
 ## Çıkarımlar
 TensorRT destekli NMS işlemleri TensorRT 10.x sürümlerinden önce TRTEfficient_NMS ve BatchedNMS şeklinde mevcut. TensorRT 10.x ile birlikte INetworkDefinition.add_nms() ile NMS eklenebiliyor. Ayrıca onnx.helper.make kullanılarak eklenen NMS nodu TensorRT onnx parseri tarafından INMSLayer'a çevirlebileceğini anlıyor. Bu işlemi Torchvision.ops.nms için yapamıyor.
 
-[TensorRT.INMSLayer](https://docs.nvidia.com/deeplearning/tensorrt/latest/_static/python-api/infer/Graph/Layers.html#inmslayer) 2 farklı yol ile oluşturulabiliyor: [ONNX:helper.make](https://github.com/mevlt01001/YOLO12-RTDETR-ensemble-model/blob/main/INMSLayer_onnx.py) ve [TensorRT:INetworkDefiniton.add_nms](https://github.com/mevlt01001/YOLO12-RTDETR-ensemble-model/blob/main/create_INMSLayer_with_trt.py)
+Her ne kadar TensorRT.INMSLayer [dökümantasyonunda](https://docs.nvidia.com/deeplearning/tensorrt/latest/_static/python-api/infer/Graph/Layers.html#inmslayer) scores ve boxes için shapelerin sırası ile [batchSize, numInputBoundingBoxes, 4] ve [batchSize, numInputBoundingBoxes, numClasses] olması gerektiği söylensede bu format hata veriyor ve çalışan format sırası ile [batchSize, numInputBoundingBoxes, 4] ve [batchSize, numClasses, numInputBoundingBoxes] olması gerekiyor.
+
+TensorRT.NMSLayer çok hızlı çalışsa da IoU thresholdingi her kutu için çok iyi düzeyde yapamıyor ve FP değerini arttırıyor.
+
+
+[`TensorRT.INMSLayer`](https://docs.nvidia.com/deeplearning/tensorrt/latest/_static/python-api/infer/Graph/Layers.html#inmslayer) 2 farklı yol ile oluşturulabiliyor: [ONNX:helper.make](https://github.com/mevlt01001/YOLO12-RTDETR-ensemble-model/blob/main/INMSLayer_onnx.py) ve [TensorRT:INetworkDefiniton.add_nms](https://github.com/mevlt01001/YOLO12-RTDETR-ensemble-model/blob/main/create_INMSLayer_with_trt.py)
 
 
 
