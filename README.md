@@ -6,7 +6,7 @@
 [`TensorRT(YOLO10+YOLO12_TorchvisionNMS)`](yolo10_yolo12NMS_bbox.py) **FPS: 18.61**\
 [`TensorRT(TorchvisionNMS)`](only_TorchvisionNMS.py) **FPS: 111.41**\
 [`TensorRT(tensorrt.INMSLayer)`](only_INMSLayer.py) **FPS: 1293.98**\
-[`TensorRT(tensorrt.INMSLayer_created_onnx)`](only_onnx_nms.py) **FPS: 1382.06**
+[`TensorRT(tensorrt.INMSLayer_created_onnx)`](only_onnx_nms.py) **FPS: 1382.06**\
 [`TensorRT(YOLO12) + TensorRT(trt.INMSLayer)`](yolo12_and_INMSLayer.py) **FPS: 47.35**
 
 ## AGX ORIN Results:
