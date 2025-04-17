@@ -5,7 +5,7 @@ import time
 import cv2
 
 yolo = load_engine("EngineFolder/YOLO12_for_inms_layer.engine")
-inms_layer = load_engine("EngineFolder/INMSLayer.engine")
+inms_layer = load_engine("EngineFolder/INMSLayer_trt.engine")
 yolo_input_buffers, yolo_output_buffers = allocate_buffers(yolo)
 inms_layer_input_buffers, inms_layer_output_buffers = allocate_buffers(inms_layer, outshape=(100, 3))
 yolo_context, yolo_stream = create_execution_context(yolo, yolo_input_buffers, yolo_output_buffers)
@@ -21,12 +21,11 @@ for i in range(150):
     data_for_yolo = np.expand_dims(data, axis=0)/255.0
     #data_for_yolo = np.random.rand(1, 3, 640, 640).astype(np.float32)
     start = time.time()
-    out =run_inference(yolo_context, yolo_stream, yolo_input_buffers, yolo_output_buffers, data=data_for_yolo)
-    #look how many boxes are there above 0.99 conf in yolo
+    out = run_inference(yolo_context, yolo_stream, yolo_input_buffers, yolo_output_buffers, data=data_for_yolo)
     max_output_boxes = np.array([100], dtype=np.int32)
-    iou_threshold = np.array([0.45], dtype=np.float32)
-    score_threshold = np.array([0.2], dtype=np.float32)
-    data_for_inms = [yolo_output_buffers[0].cpu_buffer, yolo_output_buffers[1].cpu_buffer, max_output_boxes, iou_threshold, score_threshold]
+    iou_threshold = np.array([0.55], dtype=np.float32)
+    score_threshold = np.array([0.9], dtype=np.float32)
+    data_for_inms = [np.array(yolo_output_buffers[0].cpu_buffer).reshape(1, 1000, 4), np.array(yolo_output_buffers[1].cpu_buffer).reshape(1, 1000, 1), max_output_boxes, iou_threshold, score_threshold]
     out=run_inference(inms_layer_context, inms_layer_stream, inms_layer_input_buffers, inms_layer_output_buffers, data=data_for_inms)
     print(np.trim_zeros(out[0], "b").reshape(-1, 3).shape)#53 bbox veriyor yanı 53-15 tane fp box var.
     latencies.append(time.time() - start)
