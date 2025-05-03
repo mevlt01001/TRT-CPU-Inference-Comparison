@@ -1,0 +1,7 @@
+*.onnx
+*.engine
+*.pt
+EngineFolder/
+__pycache__/
+*.ipynb
+*demo*
