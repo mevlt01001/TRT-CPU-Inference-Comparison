@@ -9,6 +9,17 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 [make_yolo_pre_post_onnx.py](make_yolo_pre_post_onnx.py) ONNX formatında preprocess+YOLO, YOLO+postprocess ve preprocess+YOLO+postprocess şeklinde 3 model oluşturur.
 
 
+## ONNXRuntime ölçüm sonuçları:
+(80 COCO class)
+- preprocess on gpu: 5.95ms
+- preprocess on cpu: 24.4ms
+- postprocess on gpu: 123 ms
+- postprocess on cpu: 23.5 ms
 
+## cv2.dnn.NMSBoxes sonucu:
+- bboxes = np.random.rand(8400, 4).astype(np.float32).tolist()
+- scores = np.random.rand(8400).astype(np.float32).tolist()
+- cv2.dnn.NMSBoxes(bboxes, scores, 0.5, 0.4)
+- **14.7ms**
 
 
