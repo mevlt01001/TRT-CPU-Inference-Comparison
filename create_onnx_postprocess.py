@@ -17,13 +17,14 @@ class make_yxyx_xyxy_scores(torch.nn.Module):
     def forward(self, x: torch.Tensor):
         # x.shape is (1,84,8400)
         scores = x[:, 4:self.num_classes+4, :]
-        cx, cy, w, h = x[:, 0:4, :].split(1, dim=1)
-        x1 = cx - w / 2
-        y1 = cy - h / 2
-        x2 = cx + w / 2
-        y2 = cy + h / 2
-        xyxy = torch.cat([x1, y1, x2, y2], dim=1).permute(0, 2, 1)
-        yxyx = torch.cat([y1, x1, y2, x2], dim=1).permute(0, 2, 1)
+        boxes = x[:, 0:4, :].permute(0, 2, 1)
+        cx, cy, w, h = boxes[..., 0:1], boxes[..., 1:2], boxes[..., 2:3], boxes[..., 3:4]
+        x1 = cx - w *0.5
+        y1 = cy - h *0.5
+        x2 = cx + w *0.5
+        y2 = cy + h *0.5
+        xyxy = torch.cat([x1, y1, x2, y2], dim=2)
+        yxyx = torch.cat([y1, x1, y2, x2], dim=2)
         return yxyx, xyxy, scores
 
 class make_selected_boxes(torch.nn.Module):
@@ -41,14 +42,14 @@ class make_selected_boxes(torch.nn.Module):
         selected_boxes = xyxy_boxes[0, selected_indices, :]
         return selected_boxes
 
-def create_INMSLayer():
+def create_INMSLayer(num_classes: int = 80):
     """
     ONNX NonMaxSuppression Layer oluşturma
     Bu fonksiyon, ONNX NonMaxSuppression Layer'ını oluşturur ve kaydeder.
     \n`YXYX(batch_size, num_bboxes, 4)` ve `SCORES(batch_size, num_classes, num_bboxes)` tesnorleri alır.
     """
-    boxes = helper.make_tensor_value_info("Boxes", onnx.TensorProto.FLOAT, [1,8400,4])
-    scores = helper.make_tensor_value_info("Scores", onnx.TensorProto.FLOAT, [1,1,8400])
+    boxes = helper.make_tensor_value_info("boxes", onnx.TensorProto.FLOAT, [1,8400,4])
+    scores = helper.make_tensor_value_info("scores", onnx.TensorProto.FLOAT, [1,num_classes,8400])
 
     max_output_boxes_per_class = helper.make_tensor(
         name="max_output_boxes_per_class",
@@ -73,7 +74,7 @@ def create_INMSLayer():
 
     nms_node = helper.make_node(
         "NonMaxSuppression",
-        inputs=["Boxes", "Scores", "max_output_boxes_per_class", "iou_threshold", "score_threshold"],
+        inputs=["boxes", "scores", "max_output_boxes_per_class", "iou_threshold", "score_threshold"],
         outputs=["selected_indices"],
         name="NMS",
         center_point_box=0
@@ -100,35 +101,32 @@ torch.onnx.export(
     make_yxyx_xyxy_scores(),
     torch.randn(1, 84, 8400),
     "onnx_folder/make_yxyx_xyxy_scores.onnx",
-    input_names=["make_yxyx_xyxy_scores_input"],
-    output_names=["yxyx", "xyxy", "scores"],
+    input_names=["input"],
+    output_names=["yxyx_out", "xyxy_out", "scores_out"],
 )
 onnx_model = onnx.load("onnx_folder/make_yxyx_xyxy_scores.onnx")
 onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
 make_yxyx_xyxy_scores_onnx, check = onnxsim.simplify(onnx_model)
-onnx.save(onnx_model, "onnx_folder/make_yxyx_xyxy_scores.onnx")
 
 create_INMSLayer()
 onnx_model = onnx.load("onnx_folder/ONNX_NMS.onnx")
 onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
 ONNX_NMS_onnx, check = onnxsim.simplify(onnx_model)
-onnx.save(onnx_model, "onnx_folder/ONNX_NMS.onnx")
 
 torch.onnx.export(
     make_selected_boxes(),
     (torch.randn(100, 3).to(dtype=torch.int64), torch.randn(1, 8400, 4)),
     "onnx_folder/make_selected_boxes.onnx",
-    input_names=["_selected_indices", "xyxy_boxes"],
+    input_names=["selected_idx", "xyxy_boxes"],
     output_names=["selected_boxes"],
     dynamic_axes={
-        "_selected_indices": {0: "N"},
-        "xyxy_boxes": {0: "N"}
+        "selected_idx": {0: "N"},
+        "selected_boxes": {0: "N"}
     }
 )
 onnx_model = onnx.load("onnx_folder/make_selected_boxes.onnx")
 onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
 make_selected_boxes_onnx, check = onnxsim.simplify(onnx_model)
-onnx.save(onnx_model, "onnx_folder/make_selected_boxes.onnx")
 
 # Combine the models
 
@@ -138,19 +136,24 @@ postprocess_onnx = combine(
         ONNX_NMS_onnx,
         make_selected_boxes_onnx,
     ],
-    srcop_destop=[
-        ["yxyx", "Boxes", "scores", "Scores"],
-        ["selected_indices", "_selected_indices", "xyxy", "xyxy_boxes"],
+    op_prefixes_after_merging=[
+        "1",
+        "2",
+        "3",
     ],
-    output_onnx_file_path="onnx_folder/postprocess.onnx",
+    srcop_destop=[
+        ["yxyx_out", "boxes", "scores_out", "scores"],
+        ["2_selected_indices", "selected_idx", "1_xyxy_out", "xyxy_boxes"],
+    ],
+    output_onnx_file_path="onnx_folder/post_process.onnx",
 )
 
 # Check the combined model
 postprocess_onnx = onnx.shape_inference.infer_shapes(postprocess_onnx)
 postprocess_onnx, check = onnxsim.simplify(postprocess_onnx)
-onnx.save(postprocess_onnx, "onnx_folder/postprocess.onnx")
+onnx.save(postprocess_onnx, "onnx_folder/post_process.onnx")
 os.remove("onnx_folder/make_yxyx_xyxy_scores.onnx")
 os.remove("onnx_folder/ONNX_NMS.onnx")
 os.remove("onnx_folder/make_selected_boxes.onnx")
-print("Postprocess ONNX model created and saved as 'onnx_folder/postprocess.onnx'")
+print("Postprocess ONNX model created and saved as 'onnx_folder/post_process.onnx'")
 
