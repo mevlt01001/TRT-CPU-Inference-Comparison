@@ -14,7 +14,7 @@ PARSER = tensorrt.OnnxParser(NETWORK, LOGGER)
 engine_folder = "engine_folder"
 os.makedirs(engine_folder, exist_ok=True)
 
-onnx_path = "onnx_folder/post_process.onnx"
+onnx_path = "onnx_folder/yolov9c.onnx"
 onnx_file = os.path.basename(onnx_path)
 file_name = onnx_file.split("/")[-1].rstrip(".onnx")
 input_shape = None
