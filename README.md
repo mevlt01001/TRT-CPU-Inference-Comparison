@@ -6,20 +6,42 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 
 [create_onnx_preprocess.py](create_onnx_preprocess.py) ONNX formatında preprocess layer oluşturur.\
 [create_onnx_postprocess.py](create_onnx_postprocess.py) ONNX formatında postprocess layer oluşturur.\
-[make_yolo_pre_post_onnx.py](make_yolo_pre_post_onnx.py) ONNX formatında preprocess+YOLO, YOLO+postprocess ve preprocess+YOLO+postprocess şeklinde 3 model oluşturur.
+[make_yolo_pre_post_onnx.py](make_yolo_pre_post_onnx.py) ONNX formatında preprocess+YOLO, YOLO+postprocess ve preprocess+YOLO+postprocess şeklinde 3 model oluşturur.\
+[onnx2engine.py](onnx2engine.py) ONNX dosyasını TensorRT kuallanarak optimize eder ve engine dosyasına dönüştürerek kaydeder.\
+[measure_latencies.py](measure_latencies.py) Belirlenen formatlarda FPS ve Gecikme ölçümü yapar.
 
 
-## ONNXRuntime ölçüm sonuçları:
-(80 COCO class)
-- preprocess on gpu: 5.95ms
-- preprocess on cpu: 24.4ms
-- postprocess on gpu: 123 ms
-- postprocess on cpu: 23.5 ms
+## FPS Sonuçları
 
-## cv2.dnn.NMSBoxes sonucu:
-- bboxes = np.random.rand(8400, 4).astype(np.float32).tolist()
-- scores = np.random.rand(8400).astype(np.float32).tolist()
-- cv2.dnn.NMSBoxes(bboxes, scores, 0.5, 0.4)
-- **14.7ms**
+| Pre-process | YOLOv9c | Post-process | FPS   |
+|-------------|---------|---------------|--------|
+| CPU         | TRT     | CPU           | 34.75  |
+| CPU         | TRT     | GPU           | 19.55  |
+| CPU         | TRT     | TRT           | 25.35  |
+| GPU         | TRT     | CPU           | 43.05  |
+| GPU         | TRT     | GPU           | 24.75  |
+| GPU         | TRT     | TRT           | 37.75  |
+| TRT         | TRT     | CPU           | 46.23  |
+| TRT         | TRT     | GPU           | 26.43  |
+| TRT         | TRT     | TRT           | 44.35  |
 
+> CPU: ONNXRuntime CPUProvider\
+> GPU: ONNXRuntime CUDAProvider\
+> TRT: TensorRT Runtime
+---
 
+## İşlem Gecikmeleri (ms)
+
+| İşlem        | CPU   | GPU   | TRT    |
+|--------------|--------|--------|---------|
+| Pre-process  | 33.28 | 6.05  | 3.73   |
+| YOLOv9c      | X    | X    | 20.29  |
+| Post-process | 14.09 | 64.90 | 34.91  |
+
+> X: YOLOv9c yalnızca TensorRT ile çalıştırıldı.
+
+### Preprocess ONNX
+![assests/pre_process.onnx.png](assests/pre_process.onnx.svg)
+
+### Postprocess ONNX
+![assests/post_process.onnx.svg](assests/post_process.onnx.svg)
