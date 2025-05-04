@@ -32,13 +32,15 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 
 ## İşlem Gecikmeleri (ms)
 
-| İşlem        | CPU   | GPU   | TRT    |
-|--------------|--------|--------|---------|
-| Pre-process  | 33.28 | 6.05  | 3.73   |
-| YOLOv9c      | X    | X    | 20.29  |
-| Post-process | 14.09 | 64.90 | 34.91  |
+| İşlem                    | CPU   | GPU   | TRT    |
+|--------------------------|--------|--------|---------|
+| Pre-process              | 33.28 | 6.05  | 3.73   |
+| YOLOv9c                  | -     | -     | 20.29  |
+| Post-process             | 14.09 | 64.90 | 34.91  |
+| Post-process (cv2.dnn)   | 18.91 |   -   |   -    |
 
-> X: YOLOv9c yalnızca TensorRT ile çalıştırıldı.
+
+> (cv2.dnn): [measure_latencies.py](measure_latencies.py) dosyasonda *only_cv2_dnn_NMSBoxes_latency* adında fonksiyon.
 
 ### Preprocess ONNX
 ![assests/pre_process.onnx.png](assests/pre_process.onnx.svg)

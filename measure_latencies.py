@@ -5,6 +5,7 @@ import numpy as np
 import time
 import os
 import tensorrt
+import cv2
 
 
 def load_engine(engine_path: str):
@@ -245,13 +246,38 @@ def only_postprocess_latency(type: str):
             fps = cnt/(time.time() - start)
             print(f"postprocess_type: {type}, latency: {lat:.2f} ms, fps: {fps:.2f} fps")
 
+def only_cv2_dnn_NMSBoxes_latency():
+    cnt = 0
+    start = time.time()
+    dummy_input = np.random.randn(1, 84, 8400).astype(np.float32)
 
+    while True:
+        cnt += 1
+        dummy_input = dummy_input.transpose(0, 2, 1) 
+        boxes = dummy_input[0][:, :4] 
+        scores = dummy_input[0][:, 4:]
+
+        class_indices = np.argmax(scores, axis=1)
+        selected_scores = scores[np.arange(scores.shape[0]), class_indices]  
+
+        bboxes = boxes
+        scores_list = selected_scores
+
+        indices = cv2.dnn.NMSBoxes(bboxes, scores_list, 0.5, 0.5)
+
+        bboxes = bboxes[indices]
+        lat = (time.time() - start) / cnt * 1000
+        fps = cnt / (time.time() - start)
+        print(f"postprocess_type: cv2.dnn.NMSBoxes, latency: {lat:.2f} ms, fps: {fps:.2f} fps")
 
 if __name__ == "__main__":
 
     # preprocess_type = "trt"  # or "cpu"
     # postprocess_type = "trt"  # or "cpu"
     # measure_latency(preprocess_type, postprocess_type)
-    only_yolov9c_latency("trt")
+    # only_yolov9c_latency("trt")
+    # only_preprocess_latency("trt")
+    # only_postprocess_latency("trt")
+    only_cv2_dnn_NMSBoxes_latency()
 
 
