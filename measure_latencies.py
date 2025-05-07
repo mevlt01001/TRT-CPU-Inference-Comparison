@@ -205,15 +205,18 @@ def only_yolov9c_latency(type: str):
             fps = cnt/(time.time() - start)
             print(f"yolov9c_type: {type}, latency: {lat:.2f} ms, fps: {fps:.2f} fps")
     else:
-        yolov9c_session = onnxruntime.InferenceSession("onnx_folder/yolov9c.onnx", providers=providers[type])
-        cnt = 0
-        start = time.time()
+        
+        yolov9c_session = onnxruntime.InferenceSession("onnx_folder/yolov9c.onnx", providers=providers[type])        
         dummy_input = np.random.randn(1,3,640,640).astype(np.float32)
+        latencies = []
         while True:
-            cnt +=1
+            start = time.time()
             yolo_output = yolov9c_session.run(None, {yolov9c_session.get_inputs()[0].name: dummy_input})[0]
-            lat = (time.time() - start)/cnt*1000
-            fps = cnt/(time.time() - start)
+            end = time.time()
+            latencies.append((end - start))  # Convert to milliseconds
+            cnt = len(latencies)-1
+            lat = np.mean(latencies[1:-1:1])*1000
+            fps = cnt/np.sum(latencies[1:-1:1])
             print(f"yolov9c_type: {type}, latency: {lat:.2f} ms, fps: {fps:.2f} fps")
 
 def only_postprocess_latency(type: str):
@@ -275,9 +278,9 @@ if __name__ == "__main__":
     # preprocess_type = "trt"  # or "cpu"
     # postprocess_type = "trt"  # or "cpu"
     # measure_latency(preprocess_type, postprocess_type)
-    # only_yolov9c_latency("trt")
+    only_yolov9c_latency("cpu")
     # only_preprocess_latency("trt")
     # only_postprocess_latency("trt")
-    only_cv2_dnn_NMSBoxes_latency()
+    # only_cv2_dnn_NMSBoxes_latency()
 
 

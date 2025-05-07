@@ -13,7 +13,7 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 
 ## FPS Sonuçları
 
-| Pre-process | YOLOv9c | Post-process | FPS   |
+| Pre-process | YOLOv9c | Post-process  | FPS    |
 |-------------|---------|---------------|--------|
 | CPU         | TRT     | CPU           | 34.75  |
 | CPU         | TRT     | GPU           | 19.55  |
@@ -33,9 +33,9 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 ## İşlem Gecikmeleri (ms)
 
 | İşlem                    | CPU   | GPU   | TRT    |
-|--------------------------|--------|--------|---------|
+|--------------------------|-------|-------|--------|
 | Pre-process              | 33.28 | 6.05  | 3.73   |
-| YOLOv9c                  | -     | -     | 20.29  |
+| YOLOv9c                  | 475   | 70.76 | 20.29  |
 | Post-process             | 14.09 | 64.90 | 34.91  |
 | Post-process (cv2.dnn)   | 18.91 |   -   |   -    |
 
