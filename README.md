@@ -36,7 +36,7 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 |--------------------------|-------|-------|--------|
 | Pre-process              | 33.28 | 6.05  | 3.73   |
 | YOLOv9c                  | 475   | 70.76 | 20.29  |
-| Post-process             | 14.09 | 64.90 | 34.91  |
+| Post-process             | 2.13  | 33.43 | 10.32  |
 | Post-process (cv2.dnn)   | 18.91 |   -   |   -    |
 
 

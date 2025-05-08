@@ -6,7 +6,7 @@ import time
 import os
 import tensorrt
 import cv2
-
+from collections import deque
 
 def load_engine(engine_path: str):
     """
@@ -67,6 +67,7 @@ def do_inference(context, stream, input_buffer, output_buffer, data):
     cuda.memcpy_htod_async(input_buffer[1], input_buffer[0], stream)
     context.execute_async_v3(stream_handle=stream.handle)
     cuda.memcpy_dtoh_async(output_buffer[0], output_buffer[1], stream)
+    cuda.memset_d32_async(int(output_buffer[1]), 0, output_buffer[0].size,  stream)
     return output_buffer[0]
 
 def measure_latency(preprocess_type: str, postprocess_type: str):
@@ -155,7 +156,6 @@ def measure_latency(preprocess_type: str, postprocess_type: str):
     else:
         raise ValueError(f"preprocess_type {preprocess_type} and postprocess_type {postprocess_type} not supported")
     
-
 def only_preprocess_latency(type: str):
     assert type in ["cpu", "gpu", "trt"], f"type {type} not in {['cpu', 'gpu', 'trt']}"
     providers = {
@@ -178,7 +178,7 @@ def only_preprocess_latency(type: str):
         preprocess_session = onnxruntime.InferenceSession("onnx_folder/pre_process.onnx", providers=providers[type])
         cnt = 0
         start = time.time()
-        dummy_input = np.random.randn(720,1280,3).astype(np.float32)
+        dummy_input = np.random.randn(720,1280,3).astype(np.int64)
         while True:
             cnt +=1
             pre_output = preprocess_session.run(None, {preprocess_session.get_inputs()[0].name: dummy_input})[0]
@@ -192,12 +192,13 @@ def only_yolov9c_latency(type: str):
         "gpu": ["CUDAExecutionProvider"],
         "cpu": ["CPUExecutionProvider"],
     }
+    preprocess_session = onnxruntime.InferenceSession("onnx_folder/pre_process.onnx", providers=["CUDAExecutionProvider"])
     if type == "trt":
         yolov9c_engine = load_engine("engine_folder/yolov9c.engine")
         input_buffer, output_buffer, context, stream = allocate_buffers(yolov9c_engine)
         cnt = 0
         start = time.time()
-        dummy_input = np.random.randn(1,3,640,640).astype(np.float32)
+        dummy_input = preprocess_session.run(None, {preprocess_session.get_inputs()[0].name: cv2.VideoCapture(0).read()[1].astype(np.int64)})[0]
         while True:
             cnt +=1
             yolo_output = do_inference(context, stream, input_buffer, output_buffer, dummy_input)
@@ -231,6 +232,12 @@ def only_postprocess_latency(type: str):
         cnt = 0
         start = time.time()
         dummy_input = np.random.randn(1,84,8400).astype(np.float32)
+        dummy_input = np.random.rand(1,84,8400).astype(np.float32)
+        dummy0 = np.random.rand(1,4,8400)
+        dummy1 = np.random.rand(1,80,8390)*0.1
+        dummy2 = np.random.rand(1,80,10)*0.7+0.3
+        dummy3 = np.concatenate((dummy1, dummy2), axis=2)
+        dummy_input = np.concatenate((dummy0, dummy3), axis=1).astype(np.float32)
         while True:
             cnt +=1
             post_output = do_inference(context, stream, input_buffer, output_buffer, dummy_input)
@@ -242,6 +249,13 @@ def only_postprocess_latency(type: str):
         cnt = 0
         start = time.time()
         dummy_input = np.random.randn(1,84,8400).astype(np.float32)
+        dummy_input = np.random.rand(1,84,8400).astype(np.float32)
+        dummy0 = np.random.rand(1,4,8400)
+        dummy1 = np.random.rand(1,80,8390)*0.1
+        dummy2 = np.random.rand(1,80,10)*0.7+0.3
+        dummy3 = np.concatenate((dummy1, dummy2), axis=2)
+        dummy_input = np.concatenate((dummy0, dummy3), axis=1).astype(np.float32)
+        # dummy_input = np.random.randn(1,84,8400).astype(np.float32)
         while True:
             cnt +=1
             post_output = postprocess_session.run(None, {postprocess_session.get_inputs()[0].name: dummy_input})[0]
@@ -273,14 +287,171 @@ def only_cv2_dnn_NMSBoxes_latency():
         fps = cnt / (time.time() - start)
         print(f"postprocess_type: cv2.dnn.NMSBoxes, latency: {lat:.2f} ms, fps: {fps:.2f} fps")
 
+
+def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.VideoCapture, yolo=9):
+    
+    assert preprocess_type in ["cpu", "gpu", "trt"], f"preprocess_type {preprocess_type} not in {['cpu', 'gpu', 'trt']}"
+    assert postprocess_type in ["cpu", "gpu", "trt"], f"postprocess_type {postprocess_type} not in {['cpu', 'gpu', 'trt']}"
+    assert yolo in [9, 11], f"yolo {yolo} not in {[9, 11]}"
+    label = f"preprocess_type: {preprocess_type}, postprocess_type: {postprocess_type}, YOLOv{yolo}"
+    providers = {
+        "gpu": ["CUDAExecutionProvider"],
+        "cpu": ["CPUExecutionProvider"],
+    }
+
+    if preprocess_type != "trt" and postprocess_type != "trt":
+        # Only YOLOv9c works with engine
+        preprocess_session = onnxruntime.InferenceSession("onnx_folder/pre_process.onnx", providers=providers[preprocess_type])
+        postprocess_session = onnxruntime.InferenceSession("onnx_folder/post_process.onnx", providers=providers[postprocess_type])
+
+        YOLO_engine = load_engine("engine_folder/yolov9c.engine") if yolo == 9 else load_engine("engine_folder/yolo11m.engine")
+        input_buffer, output_buffer, context, stream = allocate_buffers(YOLO_engine)
+
+
+        lat_buf = deque(maxlen=100)
+        while True:
+
+            ret, frame = cap.read()
+            start = time.time()
+            # Resize frame as required by the model, for example 720p
+            pre_output = preprocess_session.run(None, {preprocess_session.get_inputs()[0].name: frame.astype(np.int64)})[0]
+            yolo_output = do_inference(context, stream, input_buffer, output_buffer, pre_output)
+            post_output = postprocess_session.run(None, {postprocess_session.get_inputs()[0].name: yolo_output})[0]
+
+            lat = (time.time() - start) * 1000
+            lat_buf.append(lat)
+            lat = np.mean(lat_buf)
+            fps = 1/(lat/1000)
+
+            for box in post_output:
+                x1, y1,x2,y2 = map(int, box)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.imshow("Frame", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        cap.release()
+        cv2.destroyAllWindows()
+
+    elif preprocess_type == "trt" and postprocess_type != "trt":
+        # Preprocess and YOLO works with engine
+        postprocess_session = onnxruntime.InferenceSession("onnx_folder/post_process.onnx", providers=providers[postprocess_type])
+
+        pre_and_yolo_engine = load_engine("engine_folder/pre_and_yolo9.engine") if yolo == 9 else load_engine("engine_folder/pre_and_yolo11.engine")
+        input_buffer, output_buffer, context, stream = allocate_buffers(pre_and_yolo_engine)
+
+        lat_buf = deque(maxlen=100)
+        while True:
+
+            ret, frame = cap.read()
+            start = time.time()
+            # Resize frame as required by the model, for example 720p
+            yolo_output = do_inference(context, stream, input_buffer, output_buffer, frame)
+            post_output = postprocess_session.run(None, {postprocess_session.get_inputs()[0].name: yolo_output})[0]
+
+            lat = (time.time() - start) * 1000
+            lat_buf.append(lat)
+            lat = np.mean(lat_buf)
+            fps = 1/(lat/1000)
+
+            for box in post_output:
+                x1, y1,x2,y2 = map(int, box)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+ 
+            cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.imshow("Frame", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        cap.release()
+        cv2.destroyAllWindows()
+
+    elif preprocess_type != "trt" and postprocess_type == "trt":
+        # YOLO and Postprocess works with engine
+        preprocess_session = onnxruntime.InferenceSession("onnx_folder/pre_process.onnx", providers=providers[preprocess_type])
+
+        YOLO_and_postprocess_engine = load_engine("engine_folder/yolo9_and_post_process.engine") if yolo == 9 else load_engine("engine_folder/yolo11_and_post_process.engine")
+        input_buffer, output_buffer, context, stream = allocate_buffers(YOLO_and_postprocess_engine)
+
+        lat_buf = deque(maxlen=100)
+        while True:
+
+            ret, frame = cap.read()
+            start = time.time()
+            pre_out = preprocess_session.run(None, {preprocess_session.get_inputs()[0].name: frame.astype(np.int64)})[0]
+            yolo_output = do_inference(context, stream, input_buffer, output_buffer, pre_out)
+
+            lat = (time.time() - start) * 1000
+            lat_buf.append(lat)
+            lat = np.mean(lat_buf)
+            fps = 1/(lat/1000)
+
+            for box in yolo_output:
+                x1, y1,x2,y2 = map(int, box)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+ 
+            cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.imshow("Frame", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        cap.release()
+        cv2.destroyAllWindows()
+
+    elif preprocess_type == "trt" and postprocess_type == "trt":
+        # Preprocess, YOLOv9c and Postprocess works with engine
+        pre_and_yolo_and_postprocess_engine = load_engine("engine_folder/pre_and_yolo_and_post.engine")
+        input_buffer, output_buffer, context, stream = allocate_buffers(pre_and_yolo_and_postprocess_engine)
+
+        lat_buf = deque(maxlen=100)
+        while True:
+
+            ret, frame = cap.read()
+            start = time.time()
+            # Resize frame as required by the model, for example 720p
+            yolo_output = do_inference(context, stream, input_buffer, output_buffer, frame)
+
+            lat = (time.time() - start) * 1000
+            lat_buf.append(lat)
+            lat = np.mean(lat_buf)
+            fps = 1/(lat/1000)
+
+            for box in yolo_output:
+                x1, y1,x2,y2 = map(int, box)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+ 
+            cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.imshow("Frame", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        cap.release()
+        cv2.destroyAllWindows()
+
+    else:
+        raise ValueError(f"preprocess_type {preprocess_type} and postprocess_type {postprocess_type} not supported")
+
+
 if __name__ == "__main__":
 
     # preprocess_type = "trt"  # or "cpu"
-    # postprocess_type = "trt"  # or "cpu"
-    # measure_latency(preprocess_type, postprocess_type)
-    only_yolov9c_latency("cpu")
-    # only_preprocess_latency("trt")
+    # postprocess_type = "trt"  # or "cpu"q
+    # only_yolov9c_latency("trt")
+    # only_preprocess_latency("gpu")
     # only_postprocess_latency("trt")
     # only_cv2_dnn_NMSBoxes_latency()
+    cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    cap.set(cv2.CAP_PROP_FPS, 60)
+
+    measure_latency_cap('trt', 'trt', cap=cap, yolo=11)
 
 

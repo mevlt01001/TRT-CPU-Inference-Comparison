@@ -13,16 +13,18 @@ class make_yxyx_xyxy_scores(torch.nn.Module):
     def __init__(self, num_classes: int = 80):
         super(make_yxyx_xyxy_scores, self).__init__()
         self.num_classes = num_classes
+        self.w_ratio = 1280/640
+        self.h_ratio = 720/640
 
     def forward(self, x: torch.Tensor):
         # x.shape is (1,84,8400)
         scores = x[:, 4:self.num_classes+4, :]
         boxes = x[:, 0:4, :].permute(0, 2, 1)
         cx, cy, w, h = boxes[..., 0:1], boxes[..., 1:2], boxes[..., 2:3], boxes[..., 3:4]
-        x1 = cx - w *0.5
-        y1 = cy - h *0.5
-        x2 = cx + w *0.5
-        y2 = cy + h *0.5
+        x1 = (cx - w *0.5)*self.w_ratio
+        y1 = (cy - h *0.5)*self.h_ratio
+        x2 = (cx + w *0.5)*self.w_ratio
+        y2 = (cy + h *0.5)*self.h_ratio
         xyxy = torch.cat([x1, y1, x2, y2], dim=2)
         yxyx = torch.cat([y1, x1, y2, x2], dim=2)
         return yxyx, xyxy, scores

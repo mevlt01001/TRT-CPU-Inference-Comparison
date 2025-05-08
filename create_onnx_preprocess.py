@@ -9,6 +9,7 @@ class PreProcess(torch.nn.Module):
 
     def forward(self, x: torch.Tensor):
         #x.shape is (720, 1280, 3)
+        x = x.to(torch.float32)
         # (720, 1280, 3) -> (3, 720, 1280)
         x = x.permute(2, 0, 1)
         B,G,R = x[0:1, :, :], x[1:2, :, :], x[2:3, :, :]
@@ -28,7 +29,7 @@ os.makedirs("onnx_folder", exist_ok=True)
 
 torch.onnx.export(
     PreProcess(),
-    torch.randn(720, 1280,3),
+    torch.randint(0, 255, (720, 1280, 3)),
     "onnx_folder/pre_process.onnx",
     input_names=["pre_OP_input"],
     output_names=["pre_OP_output"],

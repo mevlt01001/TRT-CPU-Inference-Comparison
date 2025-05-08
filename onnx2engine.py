@@ -10,8 +10,37 @@ engine_folder = "engine_folder"
 os.makedirs(engine_folder, exist_ok=True)
 
 # onnx_path = "onnx_folder/yolov9c.onnx"
+models = [
+    "onnx_folder/pre_process.onnx",
+    "onnx_folder/post_process.onnx",
+    "onnx_folder/yolo9_and_post_process.onnx",
+    "onnx_folder/yolo11_and_post_process.onnx",
+    "onnx_folder/pre_and_yolo9.onnx",
+    "onnx_folder/pre_and_yolo11.onnx",
+    "onnx_folder/pre_and_yolo9_and_post.onnx",
+    "onnx_folder/pre_and_yolo11_and_post.onnx",
+    "onnx_folder/yolo11m.onnx",
+    "onnx_folder/yolov9c.onnx",
+]
+inputs = [
+    (720,1280,3),
+    (1, 84, 8400),
+    (1,3,640,640),
+    (1,3,640,640),
+    (720,1280,3),
+    (720,1280,3),
+    (720,1280,3),
+    (720,1280,3),
+    (1,3,640,640),
+    (1,3,640,640),
+]
+#control paths
+for path in models:
+    if not os.path.exists(path):
+        print(f"Path {path} does not exist.")
+        exit(1)
 
-for onnx_path in ["onnx_folder/post_process.onnx"]:
+for onnx_path, input_shape in zip(models, inputs):
     LOGGER = tensorrt.Logger(tensorrt.Logger.INFO)
     BUILDER = tensorrt.Builder(LOGGER)
     CONFIG = BUILDER.create_builder_config()
@@ -24,7 +53,6 @@ for onnx_path in ["onnx_folder/post_process.onnx"]:
     print(f"Onnx path: {onnx_path}")
     print(f"Onnx file: {onnx_file}")
     print(f"File name: {file_name}")
-    input_shape = (720, 1280, 3) if (file_name == "pre_and_yolo" or file_name == "pre_and_yolo_and_post") else (1,84,8400)
     print(f"Input shape: {input_shape}")
 
     with open(onnx_path, "rb") as f:
