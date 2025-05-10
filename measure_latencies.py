@@ -68,6 +68,7 @@ def do_inference(context, stream, input_buffer, output_buffer, data):
     context.execute_async_v3(stream_handle=stream.handle)
     cuda.memcpy_dtoh_async(output_buffer[0], output_buffer[1], stream)
     cuda.memset_d32_async(int(output_buffer[1]), 0, output_buffer[0].size,  stream)
+    stream.synchronize()   
     return output_buffer[0]
 
 def measure_latency(preprocess_type: str, postprocess_type: str):
@@ -238,12 +239,15 @@ def only_postprocess_latency(type: str):
         dummy2 = np.random.rand(1,80,10)*0.7+0.3
         dummy3 = np.concatenate((dummy1, dummy2), axis=2)
         dummy_input = np.concatenate((dummy0, dummy3), axis=1).astype(np.float32)
+        latencies = deque(maxlen=50)
         while True:
-            cnt +=1
+            start = time.time()
             post_output = do_inference(context, stream, input_buffer, output_buffer, dummy_input)
-            lat = (time.time() - start)/cnt*1000
-            fps = cnt/(time.time() - start)
-            print(f"postprocess_type: {type}, latency: {lat:.2f} ms, fps: {fps:.2f} fps")
+            end = time.time()
+            latencies.append(end - start)
+            lat = sum(latencies)/len(latencies)
+            fps = 1/lat
+            print(f"postprocess_type: {type}, latency: {lat*1000:.2f} ms, fps: {fps:.2f} fps")
     else:
         postprocess_session = onnxruntime.InferenceSession("onnx_folder/post_process.onnx", providers=providers[type])
         cnt = 0
@@ -287,7 +291,6 @@ def only_cv2_dnn_NMSBoxes_latency():
         fps = cnt / (time.time() - start)
         print(f"postprocess_type: cv2.dnn.NMSBoxes, latency: {lat:.2f} ms, fps: {fps:.2f} fps")
 
-
 def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.VideoCapture, yolo=9):
     
     assert preprocess_type in ["cpu", "gpu", "trt"], f"preprocess_type {preprocess_type} not in {['cpu', 'gpu', 'trt']}"
@@ -308,7 +311,7 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
         input_buffer, output_buffer, context, stream = allocate_buffers(YOLO_engine)
 
 
-        lat_buf = deque(maxlen=100)
+        lat_buf = deque(maxlen=50)
         while True:
 
             ret, frame = cap.read()
@@ -317,18 +320,18 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
             pre_output = preprocess_session.run(None, {preprocess_session.get_inputs()[0].name: frame.astype(np.int64)})[0]
             yolo_output = do_inference(context, stream, input_buffer, output_buffer, pre_output)
             post_output = postprocess_session.run(None, {postprocess_session.get_inputs()[0].name: yolo_output})[0]
+            end = time.time()
+            lat_buf.append(end-start)
 
-            lat = (time.time() - start) * 1000
-            lat_buf.append(lat)
-            lat = np.mean(lat_buf)
-            fps = 1/(lat/1000)
+            lat = sum(lat_buf)/len(lat_buf)
+            fps = 1/(lat)
 
             for box in post_output:
                 x1, y1,x2,y2 = map(int, box)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
             cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -343,7 +346,7 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
         pre_and_yolo_engine = load_engine("engine_folder/pre_and_yolo9.engine") if yolo == 9 else load_engine("engine_folder/pre_and_yolo11.engine")
         input_buffer, output_buffer, context, stream = allocate_buffers(pre_and_yolo_engine)
 
-        lat_buf = deque(maxlen=100)
+        lat_buf = deque(maxlen=50)
         while True:
 
             ret, frame = cap.read()
@@ -351,18 +354,18 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
             # Resize frame as required by the model, for example 720p
             yolo_output = do_inference(context, stream, input_buffer, output_buffer, frame)
             post_output = postprocess_session.run(None, {postprocess_session.get_inputs()[0].name: yolo_output})[0]
+            end = time.time()
+            lat_buf.append(end-start)
 
-            lat = (time.time() - start) * 1000
-            lat_buf.append(lat)
-            lat = np.mean(lat_buf)
-            fps = 1/(lat/1000)
+            lat = sum(lat_buf)/len(lat_buf)
+            fps = 1/(lat)
 
             for box in post_output:
                 x1, y1,x2,y2 = map(int, box)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
  
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
             cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -377,25 +380,25 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
         YOLO_and_postprocess_engine = load_engine("engine_folder/yolo9_and_post_process.engine") if yolo == 9 else load_engine("engine_folder/yolo11_and_post_process.engine")
         input_buffer, output_buffer, context, stream = allocate_buffers(YOLO_and_postprocess_engine)
 
-        lat_buf = deque(maxlen=100)
+        lat_buf = deque(maxlen=50)
         while True:
 
             ret, frame = cap.read()
             start = time.time()
             pre_out = preprocess_session.run(None, {preprocess_session.get_inputs()[0].name: frame.astype(np.int64)})[0]
             yolo_output = do_inference(context, stream, input_buffer, output_buffer, pre_out)
+            end = time.time()
+            lat_buf.append(end-start)
 
-            lat = (time.time() - start) * 1000
-            lat_buf.append(lat)
-            lat = np.mean(lat_buf)
-            fps = 1/(lat/1000)
+            lat = sum(lat_buf)/len(lat_buf)
+            fps = 1/(lat)
 
             for box in yolo_output:
                 x1, y1,x2,y2 = map(int, box)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
  
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
             cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -408,25 +411,25 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
         pre_and_yolo_and_postprocess_engine = load_engine("engine_folder/pre_and_yolo_and_post.engine")
         input_buffer, output_buffer, context, stream = allocate_buffers(pre_and_yolo_and_postprocess_engine)
 
-        lat_buf = deque(maxlen=100)
+        lat_buf = deque(maxlen=50)
         while True:
 
             ret, frame = cap.read()
             start = time.time()
             # Resize frame as required by the model, for example 720p
             yolo_output = do_inference(context, stream, input_buffer, output_buffer, frame)
+            end = time.time()
+            lat_buf.append(end-start)
 
-            lat = (time.time() - start) * 1000
-            lat_buf.append(lat)
-            lat = np.mean(lat_buf)
-            fps = 1/(lat/1000)
+            lat = sum(lat_buf)/len(lat_buf)
+            fps = 1/(lat)
 
             for box in yolo_output:
                 x1, y1,x2,y2 = map(int, box)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
  
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            info = f"latency: {lat:.2f} ms, fps: {fps:.2f}"
+            info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
             cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -437,21 +440,18 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
     else:
         raise ValueError(f"preprocess_type {preprocess_type} and postprocess_type {postprocess_type} not supported")
 
-
 if __name__ == "__main__":
 
     # preprocess_type = "trt"  # or "cpu"
-    # postprocess_type = "trt"  # or "cpu"q
-    # only_yolov9c_latency("trt")
+    # postprocess_type = "trt"  # or "cpu"
+    only_yolov9c_latency("trt")
     # only_preprocess_latency("gpu")
     # only_postprocess_latency("trt")
     # only_cv2_dnn_NMSBoxes_latency()
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-    cap.set(cv2.CAP_PROP_FPS, 60)
+    # cap = cv2.VideoCapture(0)
+    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    # cap.set(cv2.CAP_PROP_FPS, 60)
 
-    measure_latency_cap('trt', 'trt', cap=cap, yolo=11)
-
-
+    # measure_latency_cap('trt', 'trt', cap=cap, yolo=9)

@@ -13,17 +13,17 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 
 ## FPS Sonuçları
 
-| Pre-process | YOLOv9c | Post-process  | FPS    |
-|-------------|---------|---------------|--------|
-| CPU         | TRT     | CPU           | 34.75  |
-| CPU         | TRT     | GPU           | 19.55  |
-| CPU         | TRT     | TRT           | 25.35  |
-| GPU         | TRT     | CPU           | 43.05  |
-| GPU         | TRT     | GPU           | 24.75  |
-| GPU         | TRT     | TRT           | 37.75  |
-| TRT         | TRT     | CPU           | 46.23  |
-| TRT         | TRT     | GPU           | 26.43  |
-| TRT         | TRT     | TRT           | 44.35  |
+| Pre-process | YOLO (TRT) | Post-process | FPS YOLOv9c  | FPS YOLOv11m  |
+| ----------- | ---------- | ------------ | ------------ | ------------- |
+| CPU         | TRT        | CPU          | **23.14**    | **25.40**     |
+| CPU         | TRT        | GPU          | **16.54**    | **17.85**     |
+| CPU         | TRT        | TRT          | **23.36**    | **25.65**     |
+| GPU         | TRT        | CPU          | **42.76**    | **52.16**     |
+| GPU         | TRT        | GPU          | **26.71**    | **27.67**     |
+| GPU         | TRT        | TRT          | **44.45**    | **55.54**     |
+| TRT         | TRT        | CPU          | **58.14**    | **60.12**     |
+| TRT         | TRT        | GPU          | **29.65**    | **31.16**     |
+| TRT         | TRT        | TRT          | **64.12**    | **66.17**     |
 
 > CPU: ONNXRuntime CPUProvider\
 > GPU: ONNXRuntime CUDAProvider\
