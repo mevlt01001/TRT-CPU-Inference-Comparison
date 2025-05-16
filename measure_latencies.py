@@ -332,7 +332,7 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
 
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
-            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, info, (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -366,7 +366,7 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
  
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
-            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, info, (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -399,7 +399,7 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
  
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
-            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, info, (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -408,7 +408,7 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
 
     elif preprocess_type == "trt" and postprocess_type == "trt":
         # Preprocess, YOLOv9c and Postprocess works with engine
-        pre_and_yolo_and_postprocess_engine = load_engine("engine_folder/pre_and_yolo_and_post.engine")
+        pre_and_yolo_and_postprocess_engine = load_engine("engine_folder/pre_and_yolo9_and_post.engine") if yolo==9 else load_engine("engine_folder/pre_and_yolo11_and_post.engine")
         input_buffer, output_buffer, context, stream = allocate_buffers(pre_and_yolo_and_postprocess_engine)
 
         lat_buf = deque(maxlen=50)
@@ -430,7 +430,7 @@ def measure_latency_cap(preprocess_type: str, postprocess_type: str, cap: cv2.Vi
  
             cv2.putText(frame, f"{label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             info = f"latency: {lat*1000:.2f} ms, fps: {fps:.2f}"
-            cv2.putText(frame, info, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, info, (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
             cv2.imshow("Frame", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -444,14 +444,14 @@ if __name__ == "__main__":
 
     # preprocess_type = "trt"  # or "cpu"
     # postprocess_type = "trt"  # or "cpu"
-    only_yolov9c_latency("trt")
+    # only_yolov9c_latency("trt")
     # only_preprocess_latency("gpu")
     # only_postprocess_latency("trt")
     # only_cv2_dnn_NMSBoxes_latency()
-    # cap = cv2.VideoCapture(0)
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-    # cap.set(cv2.CAP_PROP_FPS, 60)
+    cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    cap.set(cv2.CAP_PROP_FPS, 60)
 
-    # measure_latency_cap('trt', 'trt', cap=cap, yolo=9)
+    measure_latency_cap('trt', 'trt', cap=cap, yolo=9)

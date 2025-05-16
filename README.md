@@ -15,15 +15,15 @@ ONNX formatına çevrilmiş [preprocess](create_onnx_preprocess.py) ve [postproc
 
 | Pre-process | YOLO (TRT) | Post-process | FPS YOLOv9c  | FPS YOLOv11m  |
 | ----------- | ---------- | ------------ | ------------ | ------------- |
-| CPU         | TRT        | CPU          | **23.14**    | **25.40**     |
-| CPU         | TRT        | GPU          | **16.54**    | **17.85**     |
-| CPU         | TRT        | TRT          | **23.36**    | **25.65**     |
-| GPU         | TRT        | CPU          | **42.76**    | **52.16**     |
-| GPU         | TRT        | GPU          | **26.71**    | **27.67**     |
-| GPU         | TRT        | TRT          | **44.45**    | **55.54**     |
-| TRT         | TRT        | CPU          | **58.14**    | **60.12**     |
-| TRT         | TRT        | GPU          | **29.65**    | **31.16**     |
-| TRT         | TRT        | TRT          | **64.12**    | **66.17**     |
+| CPU         | TRT        | CPU          | **26.28**    | **27.64**     |
+| CPU         | TRT        | GPU          | **20.52**    | **20.51**     |
+| CPU         | TRT        | TRT          | **25.56**    | **26.92**     |
+| GPU         | TRT        | CPU          | **56.72**    | **62.64**     |
+| GPU         | TRT        | GPU          | **35.42**    | **38.13**     |
+| GPU         | TRT        | TRT          | **58.02**    | **64.68**     |
+| TRT         | TRT        | CPU          | **86.14**    | **101.72**    |
+| TRT         | TRT        | GPU          | **45.14**    | **48.47**     |
+| TRT         | TRT        | TRT          | **88.45**    | **108.32**    |
 
 > CPU: ONNXRuntime CPUProvider\
 > GPU: ONNXRuntime CUDAProvider\
